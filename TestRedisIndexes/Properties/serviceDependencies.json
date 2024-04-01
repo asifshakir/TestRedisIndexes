@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "redis1": {
+      "type": "redis",
+      "connectionId": "CacheConnection"
+    },
+    "secrets1": {
+      "type": "secrets",
+      "connectionId": null
+    }
+  }
+}
