@@ -49,7 +49,7 @@ public class TestProviderPerformance(IRedisProvider provider)
         List<Maintenance> allItems = [];
         allItems = provider.GetAll().ToList();
         stopwatch.Stop();
-        Console.WriteLine($"Fetched all data {count} times from Redis cache using Option 1 in {stopwatch.Elapsed} time");
+        Console.WriteLine($"Fetched all one time from Redis cache using Option 1 in {stopwatch.Elapsed} time");
 
         stopwatch.Restart();
         var json = JsonSerializer.Serialize(allItems);

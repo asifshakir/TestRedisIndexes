@@ -1,4 +1,5 @@
 ﻿using StackExchange.Redis;
+using System.Collections.Concurrent;
 
 public class RedisProviderOption1(IDatabase db) : IRedisProvider
 {
@@ -45,15 +46,15 @@ public class RedisProviderOption1(IDatabase db) : IRedisProvider
         foreach (var key in keys)
         {
             var data = db.HashGetAllAsync(key.ToString()).Result;
-            var map = data.ToDictionary(x => x.Name.ToString().ToLower(), x => x.Value.ToString());
+                var map = data.ToDictionary(x => x.Name.ToString().ToLower(), x => x.Value.ToString());
             yield return new Maintenance
-            {
-                Id = map["id"],
-                Domain = map["domain"],
-                ClientCode = map["clientcode"],
-                StartTime = DateTimeOffset.Parse(map["starttime"]),
-                ExpiryTime = DateTimeOffset.Parse(map["expirytime"]),
-                Message = map["message"]
+                {
+                    Id = map["id"],
+                    Domain = map["domain"],
+                    ClientCode = map["clientcode"],
+                    StartTime = DateTimeOffset.Parse(map["starttime"]),
+                    ExpiryTime = DateTimeOffset.Parse(map["expirytime"]),
+                    Message = map["message"]
             };
         }
     }
@@ -62,19 +63,27 @@ public class RedisProviderOption1(IDatabase db) : IRedisProvider
     {
         var secondaryKey = $"maintenance_environments";
         var keys = db.SetMembersAsync(secondaryKey).Result;
+        ConcurrentBag<Maintenance> results = [];
+        List<Task> tasks = [];
         foreach (var key in keys)
         {
-            var data = db.HashGetAllAsync(key.ToString()).Result;
-            var map = data.ToDictionary(x => x.Name.ToString().ToLower(), x => x.Value.ToString());
-            yield return new Maintenance
+            tasks.Add(Task.Run(() =>
             {
-                Id = map["id"],
-                Domain = map["domain"],
-                ClientCode = map["clientcode"],
-                StartTime = DateTimeOffset.Parse(map["starttime"]),
-                ExpiryTime = DateTimeOffset.Parse(map["expirytime"]),
-                Message = map["message"]
-            };
+                var data = db.HashGetAllAsync(key.ToString()).Result;
+                var map = data.ToDictionary(x => x.Name.ToString().ToLower(), x => x.Value.ToString());
+                results.Add(new Maintenance
+                {
+                    Id = map["id"],
+                    Domain = map["domain"],
+                    ClientCode = map["clientcode"],
+                    StartTime = DateTimeOffset.Parse(map["starttime"]),
+                    ExpiryTime = DateTimeOffset.Parse(map["expirytime"]),
+                    Message = map["message"]
+                });
+            }
+            ));
         }
+        Task.WaitAll([.. tasks]);
+        return results;
     }
 }
